@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>City Traffic AI | Intelligent Navigation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body class="public-view">
+  <div id="map"></div>
+
+  <section class="overlay top-5 left-5 card-glass w-[420px] max-w-[calc(100vw-1.5rem)] card-enter">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">User View</p>
+        <h1 class="text-xl font-bold mt-1">Single Intelligent Vehicle Routing</h1>
+      </div>
+      <a href="/dashboard" class="text-xs text-teal-300 hover:text-teal-200">Admin Control</a>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <div>
+        <label class="field-label" for="sourceQuery">Source Place</label>
+        <input id="sourceQuery" class="input-field mt-1 w-full" placeholder="e.g. Pune Railway Station" />
+        <button id="searchSourceBtn" class="btn-neutral w-full mt-2">Search Source</button>
+      </div>
+      <div>
+        <label class="field-label" for="destinationQuery">Destination Place</label>
+        <input id="destinationQuery" class="input-field mt-1 w-full" placeholder="e.g. Pune Airport" />
+        <button id="searchDestinationBtn" class="btn-neutral w-full mt-2">Search Destination</button>
+      </div>
+    </div>
+
+    <button id="startNavigationBtn" class="btn-primary w-full mt-3">Start Navigation</button>
+
+    <div class="mt-3">
+      <label class="field-label" for="userSpeedSlider">Vehicle Speed (km/h)</label>
+      <div class="flex items-center gap-3 mt-2">
+        <input id="userSpeedSlider" type="range" min="10" max="100" value="36" class="w-full" />
+        <span id="userSpeedValue" class="text-sm font-semibold text-slate-200 w-10 text-right">36</span>
+      </div>
+      <button id="applyUserSpeedBtn" class="btn-neutral w-full mt-2">Apply Speed</button>
+    </div>
+
+    <div class="grid grid-cols-4 gap-2 mt-4">
+      <div class="stat-chip">
+        <p class="stat-label">Status</p>
+        <p class="stat-value flex items-center gap-2"><span id="statusDot" class="status-dot status-stopped"></span><span id="statusText">Paused</span></p>
+      </div>
+      <div class="stat-chip">
+        <p class="stat-label">Weather</p>
+        <p id="weatherValue" class="stat-value">Clear</p>
+      </div>
+      <div class="stat-chip">
+        <p class="stat-label">Strategy</p>
+        <p id="strategyValue" class="stat-value text-sm">IDLE</p>
+      </div>
+      <div class="stat-chip">
+        <p class="stat-label">Speed</p>
+        <p id="effectiveSpeedValue" class="stat-value text-sm">0 km/h</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="overlay bottom-5 left-5 card-glass w-[430px] max-w-[calc(100vw-1.5rem)] card-enter delay-1">
+    <p class="field-label">AI Decision Feed</p>
+    <p id="decisionFeed" class="text-sm text-slate-200 mt-1">Waiting for navigation input.</p>
+    <div class="mt-3 text-xs text-slate-300">
+      <p>Route Nodes: <span id="routeNodesText">-</span></p>
+      <p>ETA: <span id="etaText">-</span></p>
+      <p>Actual Time: <span id="actualTimeText">-</span></p>
+      <p>Hurdles: <span id="hurdlesText">Traffic 0 | Accident 0 | Weather 0 | Reroutes 0</span></p>
+    </div>
+  </section>
+
+  <button id="routeLayerToggle" class="overlay right-5 bottom-6 fab-btn" aria-label="Toggle Route Visibility">
+    <span class="fab-core">R</span>
+  </button>
+
+  <script>
+    window.APP_CONFIG = {
+      mapboxToken: "{{ mapbox_token }}",
+      mode: "user"
+    };
+  </script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+  <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+</body>
+</html>
