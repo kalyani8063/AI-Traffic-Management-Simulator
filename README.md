@@ -1,117 +1,191 @@
 # 🚦 AI Traffic Management Simulator
 
-An **AI-powered smart traffic management simulator** built using **Flask** and modern web technologies.
-The system models a city traffic environment where **intelligent agents** dynamically control traffic flow, predict congestion, optimize signal timing, and plan safer routes.
+### Dynamic AI-Based Route Planning using Flask & OpenStreetMap
 
-This project demonstrates the practical implementation of multiple **Artificial Intelligence concepts** through an interactive **Uber-inspired real-time web interface**.
+An interactive **AI-powered traffic navigation simulator** that demonstrates how intelligent routing systems adapt to changing environments such as traffic congestion, accidents, and weather conditions.
 
----
+The application simulates a **single intelligent vehicle** navigating a real road network while dynamically recalculating optimal routes using AI search techniques.
 
-## 🌟 Project Overview
-
-Urban traffic congestion is a major problem in modern cities. Traditional traffic systems operate on fixed rules and lack adaptive intelligence.
-
-This project simulates a **Smart City Traffic Control Center** where AI continuously:
-
-* Observes traffic conditions
-* Makes rational decisions
-* Optimizes signal timings
-* Plans vehicle routes
-* Predicts congestion risks
-
-The system acts as a **virtual AI traffic command center**.
+Built as an academic Artificial Intelligence project, this system showcases real-world concepts such as **state-space search, intelligent agents, and adaptive planning** — all running locally without paid APIs.
 
 ---
 
-## 🧠 AI Concepts Implemented (From Academic Syllabus)
+## 🌍 Project Overview
 
-The simulator applies core Artificial Intelligence concepts:
+This project implements a Flask-based web application that performs **real-time navigation on an OpenStreetMap (OSM) road graph**.
 
-| AI Concept              | Implementation                              |
-| ----------------------- | ------------------------------------------- |
-| Intelligent Agents      | Vehicles & traffic signals behave as agents |
-| State Space Search      | Traffic environment modeled as states       |
-| Problem Formulation     | Route finding problem definition            |
-| Breadth First Search    | Basic path exploration                      |
-| Depth First Search      | Route exploration simulation                |
-| A* Search Algorithm     | Smart route optimization                    |
-| Hill Climbing           | Traffic signal timing optimization          |
-| Constraint Satisfaction | Prevent conflicting signals                 |
-| Knowledge-Based Agents  | Rule-based risk prediction                  |
-| Planning                | Congestion reduction strategies             |
+A user selects a source and destination, and an AI routing system computes the best path.
+An administrator can introduce simulated environmental disruptions (traffic, accidents, weather), forcing the system to **replan routes dynamically**.
+
+The goal is to demonstrate how AI decision-making adapts under changing environmental constraints.
+
+---
+
+## ✨ Core Features
+
+* Real OpenStreetMap road-network loading
+* A* shortest-path routing on directed graphs
+* Source & destination search using geocoding
+* Live vehicle movement visualization on Mapbox
+* Dynamic route replanning
+* Traffic zone simulation
+* Accident-based road blocking
+* Weather-based routing penalties
+* Adjustable vehicle speed controls
+* Alternate route visualization after reroutes
+* Trip analytics (ETA, actual time, reroutes, hurdles)
+* Admin control dashboard with live monitoring
+* JSON API architecture for simulation control
+
+---
+
+## 🧠 AI Concepts Implemented
+
+| Concept                     | Implementation                               |
+| --------------------------- | -------------------------------------------- |
+| Intelligent Agent           | Single vehicle acts as decision-making agent |
+| Problem Formulation         | Source → Destination navigation task         |
+| State Space Search          | Road network modeled as graph states         |
+| A* Search Algorithm         | Optimal route computation                    |
+| Heuristic Search            | Euclidean distance heuristic                 |
+| Planning & Replanning       | Route recalculated after environment changes |
+| Knowledge-Based Environment | Traffic, accident & weather modifiers        |
+| Rational Decision Making    | Lowest-cost path selection                   |
+
+> Routing decisions adapt continuously based on environmental conditions.
 
 ---
 
 ## 🏗️ System Architecture
 
 ```
-Frontend (Uber-style UI)
+User Interface (Mapbox UI)
         │
         ▼
 Flask Backend API
         │
         ├── Simulation Engine
-        ├── AI Decision Modules
-        ├── Knowledge Base
-        └── Environment Model
-        │
-        ▼
-Live Traffic State Updates (JSON)
+        ├── OSM Road Graph
+        ├── A* Routing System
+        └── Environment Modifiers
+                │
+                ▼
+        Dynamic Route Updates
 ```
 
 ---
 
-## 🎮 Features
+## 🚗 User Workflow
 
-### 🚗 Public Simulation View
-
-* Live city traffic map
-* Animated vehicle agents
-* Fastest vs Safest route comparison
-* Traffic congestion visualization
-* AI decision insights panel
-* Risk heatmap layer
-
-### 🧠 Traffic Control Dashboard (Admin)
-
-* Start / Stop simulation
-* Modify traffic density
-* Change weather conditions
-* Spawn accidents
-* Manual signal override
-* View AI reasoning logs
-
-### 🤖 AI Capabilities
-
-* Intelligent decision-making agents
-* Dynamic signal optimization
-* Route planning using A*
-* Knowledge-based reasoning rules
-* Environment-aware planning
+1. Search for **source** and **destination** locations.
+2. System geocodes locations into coordinates.
+3. Coordinates snap to nearest OSM road nodes.
+4. A* algorithm computes optimal route.
+5. Vehicle begins navigation.
+6. Admin modifies environment (traffic/accident/weather).
+7. Route cost updates.
+8. AI automatically replans and updates path.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Admin Dashboard Capabilities
 
-### Backend
+The `/dashboard` page acts as a **Traffic Control Center**.
 
-* Python
-* Flask
-* REST API Architecture
+### Simulation Controls
 
-### Frontend
+* Start / Pause simulation
+* Reset environment
 
-* HTML5
-* Tailwind CSS
-* Vanilla JavaScript
-* Mapbox GL JS
+### Environment Simulation
 
-### AI Modules
+* Add traffic zones (increase road cost)
+* Insert accidents (block roads)
+* Change weather:
 
-* Search Algorithms (BFS, DFS, A*)
-* Rule-Based Reasoning
-* Planning Engine
-* Agent-Based Simulation
+  * Clear
+  * Rain
+  * Fog
+  * Storm
+
+### Monitoring
+
+* Live vehicle tracking
+* Route preview
+* Weather status
+* Strategy indicators
+* Backend event logs
+
+---
+
+## ⚙️ Routing Logic (Technical)
+
+Routes are computed using:
+
+```
+A* Search on Directed Road Graph
+```
+
+Edge cost calculation:
+
+```
+cost =
+edge_length
+× traffic_multiplier
+× weather_multiplier
+× global_weather_factor
+× global_density_bias
+```
+
+Rules:
+
+* Accident edges → infinite cost (blocked)
+* Traffic zones → increased multiplier
+* Weather → global penalty factor
+* Replanning triggers automatically on environment updates
+
+---
+
+## 🌦️ Environment Simulation
+
+| Condition     | Effect                            |
+| ------------- | --------------------------------- |
+| Traffic Zone  | Increases edge traversal cost     |
+| Accident      | Blocks road edge                  |
+| Weather       | Applies global routing multiplier |
+| Density Bias  | Adjusts global traffic weight     |
+| Speed Control | Alters effective vehicle speed    |
+
+---
+
+## 🔌 API Endpoints
+
+### Simulation State
+
+* `GET /api/current_route` — main simulation data
+* `GET /api/state` — compatibility state payload
+
+### Control
+
+* `POST /api/start` — start simulation
+* `POST /api/stop` — pause simulation
+* `POST /api/reset` — reset environment
+* `POST /api/set_route` — define navigation route
+
+### Environment
+
+* `POST /api/add_traffic`
+* `POST /api/add_accident`
+* `POST /api/set_weather`
+* `POST /api/change_density`
+
+### Vehicle Control
+
+* `POST /api/set_speed`
+
+### Utilities
+
+* `GET /api/geocode` — place search via Nominatim
 
 ---
 
@@ -120,25 +194,21 @@ Live Traffic State Updates (JSON)
 ```
 traffic-ai/
 │
-├── app.py
-├── routes/
-│   ├── main_routes.py
-│   └── api_routes.py
+├── app.py                 # Flask application entry
+├── config.py              # Configuration & tokens
 │
-├── ai/
-│   ├── agents.py
-│   ├── search_algorithms.py
-│   ├── planning.py
-│   └── knowledge_base.py
+├── routes/
+│   ├── main_routes.py     # UI routes
+│   └── api_routes.py      # API endpoints
 │
 ├── simulation/
-│   ├── environment.py
-│   ├── vehicle.py
-│   └── signals.py
+│   └── environment.py     # Core routing & simulation engine
+│
+├── ai/                    # Placeholder AI modules
 │
 ├── templates/
-│   ├── index.html
-│   └── dashboard.html
+│   ├── index.html         # User interface
+│   └── dashboard.html     # Admin dashboard
 │
 ├── static/
 │   ├── css/
@@ -149,135 +219,85 @@ traffic-ai/
 
 ---
 
-## ⚙️ Installation & Setup
+## 🚀 Installation & Setup
 
-### 1️⃣ Clone Repository
-
-```bash
-git clone https://github.com/your-username/ai-traffic-simulator.git
-cd ai-traffic-simulator
-```
-
-### 2️⃣ Create Virtual Environment
+### 1. Clone Repository
 
 ```bash
-python -m venv venv
+git clone https://github.com/your-username/AI-Traffic-Management-Simulator.git
+cd traffic-ai
 ```
 
-Activate:
+### 2. Create Virtual Environment
 
-**Windows**
-
-```
-venv\Scripts\activate
+```bash
+python -m venv .venv
 ```
 
-**Mac/Linux**
+Activate (Windows PowerShell):
 
+```bash
+.\.venv\Scripts\Activate.ps1
 ```
-source venv/bin/activate
-```
 
----
-
-### 3️⃣ Install Dependencies
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+### 4. Add Mapbox Token (optional)
 
-### 4️⃣ Add Mapbox Token
-
-Open:
-
-```
-static/js/map.js
+```bash
+$env:MAPBOX_TOKEN="your_mapbox_token"
 ```
 
-Replace:
-
-```javascript
-MAPBOX_TOKEN = "YOUR_TOKEN_HERE";
-```
-
----
-
-### 5️⃣ Run Application
+### 5. Run Application
 
 ```bash
 python app.py
 ```
 
-Open browser:
+Open:
 
-```
-http://127.0.0.1:5000/
-```
-
-Admin dashboard:
-
-```
-http://127.0.0.1:5000/dashboard
-```
+* User View → http://127.0.0.1:5000/
+* Admin Dashboard → http://127.0.0.1:5000/dashboard
 
 ---
 
-## 🔄 Application Workflow
+## ⚠️ Current Limitations
 
-1. Simulation environment initializes
-2. Agents perceive traffic conditions
-3. AI algorithms analyze state
-4. Planning module selects actions
-5. Signals/routes updated
-6. Frontend receives live updates
-
----
-
-## 📊 Example API Response
-
-`GET /api/state`
-
-```json
-{
-  "vehicles":[{"id":1,"lat":19.07,"lng":72.87,"speed":32}],
-  "signals":[{"id":3,"state":"GREEN"}],
-  "congestion":72,
-  "ai_decision":"Extended green signal duration"
-}
-```
+* Requires internet access for OSM graph and geocoding.
+* Single-vehicle simulation only.
+* No authentication for admin endpoints.
+* Simulation state stored in memory only.
+* No automated testing suite.
+* Placeholder AI modules not yet integrated into routing engine.
 
 ---
 
-## 🎓 Academic Relevance
+## 🔮 Future Improvements
 
-This project was developed as part of an **Artificial Intelligence course** to demonstrate real-world applications of:
+* Multi-vehicle traffic simulation
+* Reinforcement learning signal control
+* Persistent simulation storage
+* Authentication & role management
+* Real-time WebSocket updates
+* Integration of additional AI planning modules
+
+---
+
+## 🎓 Academic Context
+
+Developed as part of an Artificial Intelligence coursework project to demonstrate:
 
 * Search strategies
-* Logical agents
+* Intelligent agents
 * Planning systems
-* Knowledge representation
-* Intelligent decision-making
-
----
-
-## 🚀 Future Improvements
-
-* Reinforcement Learning traffic signals
-* Real traffic dataset integration
-* Multi-agent deep learning simulation
-* WebSocket real-time updates
-* Predictive accident analytics
-
----
-
-## 👩‍💻 Author
-
-Developed as an academic and portfolio project demonstrating applied Artificial Intelligence and full-stack system design.
+* Dynamic decision-making in uncertain environments
 
 ---
 
 ## 📜 License
 
-This project is for educational and research purposes.
+This project is intended for educational and research purposes.
