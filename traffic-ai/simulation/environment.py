@@ -9,6 +9,8 @@ except Exception:  # pragma: no cover - runtime dependency guard
     nx = None
     ox = None
 
+from ml.predictor import CongestionPredictor
+
 
 Coord = List[float]
 
@@ -49,6 +51,7 @@ class TrafficEnvironment:
         self.current_route_nodes: List[str] = []
         self.current_route_coords: List[Coord] = []
         self.alternate_route_coords: List[Coord] = []
+        self.initial_route_coords: List[Coord] = []
 
         self.vehicle_position: Coord = [self.map_center['lng'], self.map_center['lat']]
         self.vehicle_segment_index = 0
@@ -63,6 +66,14 @@ class TrafficEnvironment:
         self.logs: List[str] = []
         self.ai_decision = 'Enter source and destination places, then click Start Navigation.'
         self.last_plan_strategy = 'IDLE'
+        self.predictor = CongestionPredictor()
+        self.ml_prediction: Dict[str, Any] = {
+            'enabled': False,
+            'label': 'Unavailable',
+            'confidence': None,
+            'training_accuracy': self.predictor.training_accuracy,
+            'message': self.predictor.error_message or 'ML model not loaded.',
+        }
         self.reroute_count = 0
         self.hurdles = {'traffic': 0, 'accident': 0, 'weather': 0}
 
@@ -205,6 +216,192 @@ class TrafficEnvironment:
     def _estimate_eta_sec(self, length_m: float) -> float:
         speed_mps = max(1.0, self.manual_speed_kph / 3.6)
         return length_m / speed_mps
+
+    @staticmethod
+    def _time_of_day_from_hour(hour: int) -> str:
+        if 5 <= hour <= 11:
+            return 'Morning'
+        if 12 <= hour <= 16:
+            return 'Afternoon'
+        if 17 <= hour <= 20:
+            return 'Evening'
+        return 'Night'
+
+    def _route_distance_km(self) -> float:
+        if not self.current_route_nodes or len(self.current_route_nodes) < 2:
+            return 0.0
+        total_m = 0.0
+        for i in range(len(self.current_route_nodes) - 1):
+            u = self.current_route_nodes[i]
+            v = self.current_route_nodes[i + 1]
+            try:
+                total_m += float(self.routing_graph[int(u)][int(v)].get('length', 0.0))
+            except Exception:
+                continue
+        return total_m / 1000.0
+
+    def _route_span_km(self) -> float:
+        dx = float(self.destination_coord[0]) - float(self.source_coord[0])
+        dy = float(self.destination_coord[1]) - float(self.source_coord[1])
+        # Local-scope longitude/latitude approximation is sufficient for relative route features.
+        return max(0.35, math.hypot(dx, dy) * 111.0)
+
+    def _route_heading(self) -> str:
+        dx = float(self.destination_coord[0]) - float(self.source_coord[0])
+        dy = float(self.destination_coord[1]) - float(self.source_coord[1])
+        if abs(dx) < 1e-9 and abs(dy) < 1e-9:
+            return 'Northbound'
+
+        angle = (math.degrees(math.atan2(dx, dy)) + 360.0) % 360.0
+        headings = [
+            'Northbound',
+            'NorthEast',
+            'Eastbound',
+            'SouthEast',
+            'Southbound',
+            'SouthWest',
+            'Westbound',
+            'NorthWest',
+        ]
+        return headings[int(((angle + 22.5) % 360.0) // 45.0)]
+
+    def _route_turn_density(self) -> float:
+        coords = self.current_route_coords
+        if len(coords) < 3:
+            return 0.2
+
+        turns = 0
+        for index in range(1, len(coords) - 1):
+            ax = coords[index][0] - coords[index - 1][0]
+            ay = coords[index][1] - coords[index - 1][1]
+            bx = coords[index + 1][0] - coords[index][0]
+            by = coords[index + 1][1] - coords[index][1]
+            a_len = math.hypot(ax, ay)
+            b_len = math.hypot(bx, by)
+            if a_len < 1e-8 or b_len < 1e-8:
+                continue
+
+            dot = max(-1.0, min(1.0, (ax * bx + ay * by) / (a_len * b_len)))
+            angle = math.degrees(math.acos(dot))
+            if angle >= 22.0:
+                turns += 1
+
+        route_distance = max(self._route_distance_km(), 0.5)
+        return round(min(9.5, max(0.2, turns / route_distance)), 2)
+
+    def _coord_sector(self, coord: Coord) -> str:
+        dx = float(coord[0]) - float(self.map_center['lng'])
+        dy = float(coord[1]) - float(self.map_center['lat'])
+        if abs(dx) < 0.01 and abs(dy) < 0.01:
+            return 'Central'
+        if dy >= 0 and dx >= 0:
+            return 'NorthEast'
+        if dy >= 0 and dx <= 0:
+            return 'NorthWest'
+        if dy <= 0 and dx >= 0:
+            return 'SouthEast'
+        return 'SouthWest'
+
+    def _build_ml_features(self) -> Dict[str, Any]:
+        local_time = time.localtime()
+        hour = int(local_time.tm_hour)
+        traffic_density = min(100, max(0, int(round((self.global_traffic_bias - 1.0) * 180.0))))
+        num_vehicles = min(500, max(5, int(25 + traffic_density * 4.1 + len(self.traffic_zones) * 12)))
+        signal_delay_sec = min(
+            180,
+            max(5, int(20 + traffic_density * 0.8 + len(self.accidents) * 18 + len(self.traffic_zones) * 9)),
+        )
+        route_distance_km = max(0.5, round(self._route_distance_km(), 2))
+        travel_time_min = max(
+            2.0,
+            round(
+                (
+                    self.session_actual_sec
+                    if self.session_actual_sec is not None
+                    else self.session_estimated_sec
+                )
+                / 60.0,
+                2,
+            ),
+        )
+        avg_speed_kph = max(5.0, round(self.effective_speed_kph or self.manual_speed_kph, 2))
+        route_span_km = round(self._route_span_km(), 2)
+        route_directness = round(min(2.6, max(1.0, route_distance_km / max(route_span_km, 0.35))), 2)
+        route_signal_pressure = round(min(35.0, max(0.5, signal_delay_sec / max(travel_time_min, 2.0))), 2)
+
+        if route_distance_km < 4:
+            route_context = 'InnerCore'
+        elif route_directness > 1.45:
+            route_context = 'DetourHeavy'
+        elif traffic_density >= 70 or signal_delay_sec >= 100:
+            route_context = 'CongestedCorridor'
+        elif route_distance_km >= 18:
+            route_context = 'CrossCity'
+        else:
+            route_context = 'Connector'
+
+        return {
+            'time_of_day': self._time_of_day_from_hour(hour),
+            'hour': hour,
+            'day_of_week': time.strftime('%A', local_time),
+            'weather': self.weather,
+            'traffic_density': traffic_density,
+            'num_vehicles': num_vehicles,
+            'avg_speed_kph': avg_speed_kph,
+            'num_accidents': len(self.accidents),
+            'road_block': 1 if self.accidents else 0,
+            'signal_delay_sec': signal_delay_sec,
+            'reroute_count': self.reroute_count,
+            'route_distance_km': route_distance_km,
+            'travel_time_min': travel_time_min,
+            'source_sector': self._coord_sector(self.source_coord),
+            'destination_sector': self._coord_sector(self.destination_coord),
+            'route_heading': self._route_heading(),
+            'route_span_km': route_span_km,
+            'route_directness': route_directness,
+            'route_turn_density': self._route_turn_density(),
+            'route_signal_pressure': route_signal_pressure,
+            'route_context': route_context,
+        }
+
+    def _update_ml_prediction(self) -> None:
+        self.ml_prediction = self.predictor.predict(self._build_ml_features())
+
+    def _build_upcoming_alert(self) -> Dict[str, Any]:
+        if not self.is_running:
+            return {'type': 'none', 'message': ''}
+
+        nearest_alert: Optional[Dict[str, Any]] = None
+
+        for zone in self.traffic_zones.values():
+            distance = math.hypot(self.vehicle_position[0] - zone['lng'], self.vehicle_position[1] - zone['lat'])
+            if distance <= 0.01:
+                candidate = {
+                    'type': 'traffic',
+                    'distance': distance,
+                    'message': 'Upcoming traffic ahead. Expect slower movement and possible rerouting.',
+                }
+                if nearest_alert is None or distance < nearest_alert['distance']:
+                    nearest_alert = candidate
+
+        for accident in self.accidents.values():
+            distance = math.hypot(self.vehicle_position[0] - accident['lng'], self.vehicle_position[1] - accident['lat'])
+            if distance <= 0.012:
+                candidate = {
+                    'type': 'accident',
+                    'distance': distance,
+                    'message': 'Upcoming accident zone detected. Vehicle is preparing to avoid the blocked road.',
+                }
+                if nearest_alert is None or distance < nearest_alert['distance']:
+                    nearest_alert = candidate
+
+        if nearest_alert is None:
+            return {'type': 'none', 'message': ''}
+
+        return {
+            'type': nearest_alert['type'],
+            'message': nearest_alert['message'],
+        }
 
     def _compose_route_coords(self, node_path: List[Any], start_coord: Coord, end_coord: Coord) -> List[Coord]:
         if not node_path:
@@ -357,6 +554,7 @@ class TrafficEnvironment:
         self.current_route_nodes = [str(n) for n in path]
         self.current_route_coords = self._compose_route_coords(path, self.source_coord, self.destination_coord)
         self.alternate_route_coords = []
+        self.initial_route_coords = [coord.copy() for coord in self.current_route_coords]
         self.reroute_count = 0
         self.hurdles = {'traffic': 0, 'accident': 0, 'weather': 0}
         self.session_started_at = time.time()
@@ -586,6 +784,7 @@ class TrafficEnvironment:
 
     def get_current_route(self) -> Dict[str, Any]:
         self.update_environment()
+        self._update_ml_prediction()
 
         return {
             'status': 'ok' if self.graph_ready else 'error',
@@ -605,6 +804,7 @@ class TrafficEnvironment:
             'ai_decision': self.ai_decision,
             'route_nodes': self.current_route_nodes,
             'route_coords': self.current_route_coords,
+            'initial_route_coords': self.initial_route_coords,
             'vehicle': {
                 'id': 1,
                 'lng': round(self.vehicle_position[0], 6),
@@ -621,6 +821,8 @@ class TrafficEnvironment:
                 'estimated_time_sec': round(self.session_estimated_sec, 1),
                 'actual_time_sec': round(self.session_actual_sec, 1) if self.session_actual_sec is not None else None,
             },
+            'ml_prediction': self.ml_prediction,
+            'upcoming_alert': self._build_upcoming_alert(),
             'traffic_zones': list(self.traffic_zones.values()),
             'accidents': list(self.accidents.values()),
             'graph_nodes': [],
@@ -652,6 +854,8 @@ class TrafficEnvironment:
             'route_coords': self.current_route_coords,
             'traffic_zones': route_payload['traffic_zones'],
             'accidents': route_payload['accidents'],
+            'initial_route_coords': route_payload['initial_route_coords'],
+            'upcoming_alert': route_payload['upcoming_alert'],
             'graph_nodes': [],
             'source': self.source_node,
             'destination': self.destination_node,
@@ -663,6 +867,7 @@ class TrafficEnvironment:
             'strategy': self.last_plan_strategy,
             'graph_ready': self.graph_ready,
             'graph_error': self.graph_error,
+            'ml_prediction': route_payload['ml_prediction'],
         }
 
 

@@ -14,13 +14,19 @@
 <body class="public-view">
   <div id="map"></div>
 
-  <section class="overlay top-5 left-5 card-glass w-[420px] max-w-[calc(100vw-1.5rem)] card-enter">
+  <section class="overlay public-main-panel card-glass w-[420px] max-w-[calc(100vw-1.5rem)] card-enter">
     <div class="flex items-start justify-between gap-3">
       <div>
         <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">User View</p>
         <h1 class="text-xl font-bold mt-1">Single Intelligent Vehicle Routing</h1>
       </div>
-      <a href="/dashboard" class="text-xs text-teal-300 hover:text-teal-200">Admin Control</a>
+      <div class="simulation-header-side">
+        <div class="simulation-clock-wrap">
+          <p class="simulation-clock-label">Time</p>
+          <p id="simulationClockValue" class="simulation-clock-value">--:--</p>
+        </div>
+        <a href="/dashboard" class="text-xs text-teal-300 hover:text-teal-200">Admin Control</a>
+      </div>
     </div>
 
     <div class="grid grid-cols-2 gap-3 mt-4">
@@ -67,7 +73,18 @@
     </div>
   </section>
 
-  <section class="overlay bottom-5 left-5 card-glass w-[430px] max-w-[calc(100vw-1.5rem)] card-enter delay-1">
+  <section id="mlForecastBanner" class="overlay public-ml-banner card-glass w-[380px] max-w-[calc(100vw-1.5rem)] hidden" aria-live="polite">
+    <p class="field-label">ML Forecast</p>
+    <p id="mlForecastValue" class="ml-banner-value mt-2">Unavailable</p>
+    <p id="mlMetaText" class="text-[11px] text-slate-300 mt-2">Run the training script to enable ML.</p>
+  </section>
+
+  <section id="liveAlertCard" class="overlay public-alert-panel card-glass w-[360px] max-w-[calc(100vw-1.5rem)] card-enter delay-2 hidden">
+    <p id="liveAlertLabel" class="field-label">Live Alert</p>
+    <p id="liveAlertText" class="text-sm text-slate-100 mt-1">Monitoring route conditions.</p>
+  </section>
+
+  <section class="overlay public-decision-panel card-glass w-[430px] max-w-[calc(100vw-1.5rem)] card-enter delay-1">
     <p class="field-label">AI Decision Feed</p>
     <p id="decisionFeed" class="text-sm text-slate-200 mt-1">Waiting for navigation input.</p>
     <div class="mt-3 text-xs text-slate-300">

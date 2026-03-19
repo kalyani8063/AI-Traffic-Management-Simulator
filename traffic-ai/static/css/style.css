@@ -40,6 +40,59 @@ body {
   z-index: 10;
 }
 
+.public-main-panel {
+  top: 1.25rem;
+  left: 1.25rem;
+}
+
+.simulation-header-side {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.simulation-clock-wrap {
+  text-align: right;
+}
+
+.simulation-clock-label {
+  margin: 0;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.simulation-clock-value {
+  margin: 0.15rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #f3fbff;
+}
+
+.public-ml-banner {
+  top: 1.25rem;
+  right: 1.25rem;
+  left: auto;
+  transform: none;
+  width: min(380px, calc(100vw - 2.5rem));
+}
+
+.public-alert-panel {
+  top: 8.25rem;
+  right: 1.25rem;
+}
+
+.public-decision-panel {
+  bottom: 1.25rem;
+  left: 1.25rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
 .card-glass,
 .card-ops {
   border-radius: var(--radius);
@@ -226,6 +279,35 @@ body {
   gap: 1rem;
 }
 
+.admin-header-side {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dashboard-clock-wrap {
+  min-width: 220px;
+  text-align: right;
+}
+
+.dashboard-clock-label {
+  margin: 0;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.dashboard-clock-value {
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.9rem, 3vw, 3rem);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f3fbff;
+  text-shadow: 0 0 18px rgba(55, 231, 255, 0.18);
+}
+
 .logo-mark {
   width: 38px;
   height: 38px;
@@ -254,6 +336,32 @@ body {
 .terminal-panel::-webkit-scrollbar-thumb {
   background: rgba(0, 212, 170, 0.34);
   border-radius: 999px;
+}
+
+.ml-banner-value {
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #f3fbff;
+}
+
+.ml-banner-show {
+  animation: mlBannerPop 0.55s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes mlBannerPop {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .vehicle-marker {
@@ -297,6 +405,15 @@ body {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .admin-header-side {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-clock-wrap {
+    text-align: left;
+  }
 }
 
 @media (max-width: 920px) {
@@ -305,5 +422,90 @@ body {
     right: 0.75rem;
     width: auto;
     max-width: calc(100vw - 1.5rem);
+  }
+
+  .simulation-header-side {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+}
+
+@media (max-height: 860px) {
+  .public-main-panel,
+  .public-ml-banner,
+  .public-alert-panel,
+  .public-decision-panel {
+    width: min(430px, calc(50vw - 1.25rem));
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .public-main-panel {
+    top: 0.75rem;
+    left: 0.75rem;
+    right: auto;
+  }
+
+  .public-ml-banner {
+    top: 0.75rem;
+    right: 0.75rem;
+    left: auto;
+    width: min(380px, calc(50vw - 1.25rem));
+  }
+
+  .public-alert-panel {
+    top: 7rem;
+    right: 0.75rem;
+    left: auto;
+    width: min(360px, calc(50vw - 1.25rem));
+  }
+
+  .public-decision-panel {
+    top: auto;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: auto;
+    max-height: 180px;
+    overflow: auto;
+  }
+}
+
+@media (max-width: 920px), (max-height: 760px) {
+  .public-main-panel,
+  .public-ml-banner,
+  .public-alert-panel,
+  .public-decision-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: min(100%, 430px);
+    max-width: 100%;
+    transform: none;
+  }
+
+  .public-view {
+    position: relative;
+    min-height: 100vh;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+  }
+
+  #map {
+    position: fixed;
+    inset: 0;
+  }
+
+  .public-view .overlay {
+    z-index: 10;
+  }
+
+  .simulation-header-side,
+  .simulation-clock-wrap {
+    align-items: flex-start;
+    text-align: left;
   }
 }

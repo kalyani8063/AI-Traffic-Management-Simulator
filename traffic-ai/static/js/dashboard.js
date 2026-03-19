@@ -2,8 +2,10 @@ let map;
 let selectedTool = 'traffic';
 let vehicleMarker = null;
 let accidentMarkers = [];
+const POLL_INTERVAL_MS = 2000;
 
 const logsPanel = document.getElementById('logsPanel');
+let dashboardClockTimer = null;
 
 function markerElement(className) {
   const el = document.createElement('div');
@@ -71,6 +73,36 @@ function upsertRoute(state) {
   } else if (vehicleMarker && state.vehicle) {
     vehicleMarker.setLngLat([state.vehicle.lng, state.vehicle.lat]);
   }
+
+  const altData = {
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: state.alternate_route_coords || [],
+    },
+  };
+
+  const altSource = map.getSource('alt-route-line');
+  if (altSource) {
+    altSource.setData(altData);
+  } else {
+    map.addSource('alt-route-line', { type: 'geojson', data: altData });
+    map.addLayer({
+      id: 'alt-route-line-layer',
+      type: 'line',
+      source: 'alt-route-line',
+      paint: {
+        'line-color': '#f59e0b',
+        'line-width': 3,
+        'line-opacity': 0.85,
+        'line-dasharray': [1, 2],
+      },
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+    });
+  }
 }
 
 function upsertTrafficZones(zones) {
@@ -134,6 +166,10 @@ function updateMonitoring(state) {
   document.getElementById('planningStrategyValue').textContent = state.strategy || 'DYNAMIC_A_STAR';
   document.getElementById('currentRouteValue').textContent = (state.route_nodes || []).slice(0, 3).join(' -> ') + (state.route_nodes?.length > 3 ? ' ...' : '') || '-';
   document.getElementById('weatherStateValue').textContent = state.weather || 'Clear';
+  const prediction = state.ml_prediction || {};
+  document.getElementById('mlForecastAdminValue').textContent = prediction.enabled
+    ? `${prediction.label}${prediction.confidence ? ` (${prediction.confidence}%)` : ''}`
+    : 'Unavailable';
 
   logsPanel.innerHTML = '';
   (state.logs || []).slice().reverse().forEach((line) => {
@@ -141,6 +177,24 @@ function updateMonitoring(state) {
     row.textContent = line;
     logsPanel.appendChild(row);
   });
+}
+
+function updateDashboardClock() {
+  const clock = document.getElementById('dashboardClockValue');
+  if (!clock) return;
+  clock.textContent = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function initDashboardClock() {
+  updateDashboardClock();
+  if (dashboardClockTimer) {
+    window.clearInterval(dashboardClockTimer);
+  }
+  dashboardClockTimer = window.setInterval(updateDashboardClock, 1000);
 }
 
 async function postApi(url, payload = {}) {
@@ -258,9 +312,10 @@ function initMap() {
 
   map.on('load', () => {
     refreshState();
-    setInterval(refreshState, 2000);
+    setInterval(refreshState, POLL_INTERVAL_MS);
   });
 }
 
 bindControls();
+initDashboardClock();
 initMap();
